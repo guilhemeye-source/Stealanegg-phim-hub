@@ -1,6 +1,6 @@
 --// aphim-hub | PARA BOTS
 --// Clica para Teleportar
---// 0.1s antes | 0.70s na Base
+--// 0.2s antes | 0.70s na Base
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -11,7 +11,7 @@ local Player = Players.LocalPlayer
 -- CONFIGURAÇÃO
 --==================================================
 
-local TEMPO_ANTES = 0.1
+local TEMPO_ANTES = 0.2
 local TEMPO_NA_BASE = 0.70
 
 --==================================================
@@ -23,10 +23,6 @@ ScreenGui.Name = "aphimHub"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = Player:WaitForChild("PlayerGui")
-
---==================================================
--- PAINEL
---==================================================
 
 local Main = Instance.new("Frame")
 Main.Name = "Main"
@@ -104,12 +100,10 @@ local function FindBaseSpawn()
         end
 
         if Base:IsA("Model") then
-
-            local Spawn =
-                Base:FindFirstChildWhichIsA(
-                    "SpawnLocation",
-                    true
-                )
+            local Spawn = Base:FindFirstChildWhichIsA(
+                "SpawnLocation",
+                true
+            )
 
             if Spawn then
                 return Spawn
@@ -124,11 +118,9 @@ local function FindBaseSpawn()
     local Spawns = {}
 
     for _, Obj in ipairs(workspace:GetDescendants()) do
-
         if Obj:IsA("SpawnLocation") then
             table.insert(Spawns, Obj)
         end
-
     end
 
     if #Spawns == 1 then
@@ -142,9 +134,7 @@ local function FindBaseSpawn()
         if Nome:find("base")
         or Nome:find("spawn")
         or Nome:find("home") then
-
             return Spawn
-
         end
     end
 
@@ -171,27 +161,22 @@ local function TeleportToBase()
         return
     end
 
-    local Root =
-        Character:FindFirstChild("HumanoidRootPart")
-
-    local Humanoid =
-        Character:FindFirstChild("Humanoid")
+    local Root = Character:FindFirstChild("HumanoidRootPart")
+    local Humanoid = Character:FindFirstChild("Humanoid")
 
     if not Root or not Humanoid then
         return
     end
 
-    -- Guarda posição original
     local PosicaoOriginal = Root.CFrame
 
-    -- 0.1 segundo antes do teleporte
+    -- 0.2 segundo antes do teleporte
     task.wait(TEMPO_ANTES)
 
     if not Root or not Root.Parent then
         return
     end
 
-    -- Estabiliza o personagem
     Humanoid:SetStateEnabled(
         Enum.HumanoidStateType.Running,
         false
@@ -226,7 +211,6 @@ local function TeleportToBase()
         Root.CFrame = PosicaoOriginal
     end
 
-    -- Restaura o personagem
     if Humanoid and Humanoid.Parent then
 
         Humanoid:SetStateEnabled(
@@ -247,22 +231,12 @@ end
 
 local BostButton = Instance.new("TextButton")
 
-BostButton.Size =
-    UDim2.new(1, -16, 0, 38)
-
-BostButton.Position =
-    UDim2.fromOffset(8, 47)
-
-BostButton.BackgroundColor3 =
-    Color3.fromRGB(0, 100, 210)
-
+BostButton.Size = UDim2.new(1, -16, 0, 38)
+BostButton.Position = UDim2.fromOffset(8, 47)
+BostButton.BackgroundColor3 = Color3.fromRGB(0, 100, 210)
 BostButton.BorderSizePixel = 0
-
 BostButton.Text = "☑️ PARA BOTS"
-
-BostButton.TextColor3 =
-    Color3.fromRGB(255, 255, 255)
-
+BostButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 BostButton.TextSize = 13
 BostButton.Font = Enum.Font.GothamBold
 BostButton.Parent = Main
@@ -271,16 +245,10 @@ local BostCorner = Instance.new("UICorner")
 BostCorner.CornerRadius = UDim.new(0, 8)
 BostCorner.Parent = BostButton
 
---==================================================
--- CLIQUE
---==================================================
-
 BostButton.MouseButton1Click:Connect(function()
-
     task.spawn(function()
         TeleportToBase()
     end)
-
 end)
 
 --==================================================
@@ -288,17 +256,14 @@ end)
 --==================================================
 
 local OpenButton = Instance.new("TextButton")
-
 OpenButton.Name = "Reabrir"
 OpenButton.Size = UDim2.fromOffset(52, 52)
 OpenButton.Position = UDim2.fromOffset(15, 180)
 OpenButton.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
-
 OpenButton.Text = "AH"
 OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 OpenButton.TextSize = 13
 OpenButton.Font = Enum.Font.GothamBold
-
 OpenButton.Visible = false
 OpenButton.Parent = ScreenGui
 
@@ -306,22 +271,14 @@ local OpenCorner = Instance.new("UICorner")
 OpenCorner.CornerRadius = UDim.new(1, 0)
 OpenCorner.Parent = OpenButton
 
---==================================================
--- ABRIR / FECHAR
---==================================================
-
 CloseButton.MouseButton1Click:Connect(function()
-
     Main.Visible = false
     OpenButton.Visible = true
-
 end)
 
 OpenButton.MouseButton1Click:Connect(function()
-
     Main.Visible = true
     OpenButton.Visible = false
-
 end)
 
 --==================================================
@@ -334,10 +291,8 @@ local StartPos
 
 Top.InputBegan:Connect(function(Input)
 
-    if Input.UserInputType ==
-        Enum.UserInputType.MouseButton1
-    or Input.UserInputType ==
-        Enum.UserInputType.Touch then
+    if Input.UserInputType == Enum.UserInputType.MouseButton1
+    or Input.UserInputType == Enum.UserInputType.Touch then
 
         Dragging = true
         DragStart = Input.Position
@@ -345,15 +300,11 @@ Top.InputBegan:Connect(function(Input)
 
         Input.Changed:Connect(function()
 
-            if Input.UserInputState ==
-                Enum.UserInputState.End then
-
+            if Input.UserInputState == Enum.UserInputState.End then
                 Dragging = false
-
             end
 
         end)
-
     end
 end)
 
@@ -363,13 +314,10 @@ UserInputService.InputChanged:Connect(function(Input)
         return
     end
 
-    if Input.UserInputType ==
-        Enum.UserInputType.MouseMovement
-    or Input.UserInputType ==
-        Enum.UserInputType.Touch then
+    if Input.UserInputType == Enum.UserInputType.MouseMovement
+    or Input.UserInputType == Enum.UserInputType.Touch then
 
-        local Delta =
-            Input.Position - DragStart
+        local Delta = Input.Position - DragStart
 
         Main.Position = UDim2.new(
             StartPos.X.Scale,
@@ -377,7 +325,6 @@ UserInputService.InputChanged:Connect(function(Input)
             StartPos.Y.Scale,
             StartPos.Y.Offset + Delta.Y
         )
-
     end
 end)
 
@@ -387,7 +334,7 @@ end)
 
 print("aphim-hub carregado!")
 print("☑️ PARA BOTS: pronto")
-print("Tempo antes: 0.1s")
+print("Tempo antes: 0.2s")
 print("Tempo na Base: 0.70s")
 
 
