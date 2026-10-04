@@ -1,11 +1,18 @@
 --// aphim-hub | PARA BOTS
 --// Clica para Teleportar
---// 0.1s antes | 0.90s na Base
+--// 0.1s antes | 0.70s na Base
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 
 local Player = Players.LocalPlayer
+
+--==================================================
+-- CONFIGURAÇÃO
+--==================================================
+
+local TEMPO_ANTES = 0.1
+local TEMPO_NA_BASE = 0.70
 
 --==================================================
 -- GUI
@@ -130,8 +137,7 @@ local function FindBaseSpawn()
 
     for _, Spawn in ipairs(Spawns) do
 
-        local Nome =
-            string.lower(Spawn.Name)
+        local Nome = string.lower(Spawn.Name)
 
         if Nome:find("base")
         or Nome:find("spawn")
@@ -142,9 +148,7 @@ local function FindBaseSpawn()
         end
     end
 
-    warn(
-        "aphim-hub: Ponto da Base não encontrado!"
-    )
+    warn("aphim-hub: Ponto da Base não encontrado!")
 
     return nil
 end
@@ -168,28 +172,26 @@ local function TeleportToBase()
     end
 
     local Root =
-        Character:FindFirstChild(
-            "HumanoidRootPart"
-        )
+        Character:FindFirstChild("HumanoidRootPart")
 
     local Humanoid =
-        Character:FindFirstChild(
-            "Humanoid"
-        )
+        Character:FindFirstChild("Humanoid")
 
     if not Root or not Humanoid then
         return
     end
 
+    -- Guarda posição original
     local PosicaoOriginal = Root.CFrame
 
-    -- 0.1 segundo antes
-    task.wait(0.1)
+    -- 0.1 segundo antes do teleporte
+    task.wait(TEMPO_ANTES)
 
     if not Root or not Root.Parent then
         return
     end
 
+    -- Estabiliza o personagem
     Humanoid:SetStateEnabled(
         Enum.HumanoidStateType.Running,
         false
@@ -202,9 +204,9 @@ local function TeleportToBase()
 
     Humanoid.PlatformStand = true
 
+    -- Teleporta para a Base
     local NovaPosicao =
-        Point.CFrame +
-        Vector3.new(0, 4, 0)
+        Point.CFrame + Vector3.new(0, 4, 0)
 
     Root.CFrame = NovaPosicao
 
@@ -214,17 +216,17 @@ local function TeleportToBase()
         Root.CFrame = NovaPosicao
     end
 
-    print(
-        "aphim-hub: chegou na Base"
-    )
+    print("aphim-hub: chegou na Base")
 
-    -- 0.90 segundo na Base
-    task.wait(0.90)
+    -- 0.70 segundo na Base
+    task.wait(TEMPO_NA_BASE)
 
+    -- Volta para a posição original
     if Root and Root.Parent then
         Root.CFrame = PosicaoOriginal
     end
 
+    -- Restaura o personagem
     if Humanoid and Humanoid.Parent then
 
         Humanoid:SetStateEnabled(
@@ -236,9 +238,7 @@ local function TeleportToBase()
 
     end
 
-    print(
-        "aphim-hub: voltou para posição original"
-    )
+    print("aphim-hub: voltou para posição original")
 end
 
 --==================================================
@@ -268,9 +268,7 @@ BostButton.Font = Enum.Font.GothamBold
 BostButton.Parent = Main
 
 local BostCorner = Instance.new("UICorner")
-BostCorner.CornerRadius =
-    UDim.new(0, 8)
-
+BostCorner.CornerRadius = UDim.new(0, 8)
 BostCorner.Parent = BostButton
 
 --==================================================
@@ -355,6 +353,7 @@ Top.InputBegan:Connect(function(Input)
             end
 
         end)
+
     end
 end)
 
@@ -389,7 +388,7 @@ end)
 print("aphim-hub carregado!")
 print("☑️ PARA BOTS: pronto")
 print("Tempo antes: 0.1s")
-print("Tempo na Base: 0.90s")
+print("Tempo na Base: 0.70s")
 
 
 
