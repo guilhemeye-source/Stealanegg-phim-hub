@@ -1,6 +1,8 @@
 --// aphim-hub | PARA BOTS
---// Detecta Tools novas no Backpack e no Character
---// 0.30s antes do teleporte
+--// Sistema para seu próprio jogo
+--// Detecta Tools no Backpack/Character
+--// Detecta ovos e ProximityPrompts recursivamente
+--// 8s antes do teleporte
 --// 0.90s permanecendo na Base
 
 local Players = game:GetService("Players")
@@ -16,11 +18,11 @@ local Backpack = Player:WaitForChild("Backpack")
 local Ativado = false
 local Conexoes = {}
 
-local TEMPO_ANTES = 0.30
+local TEMPO_ANTES = 8
 local TEMPO_NA_BASE = 0.90
 
-local ProcessandoTool = false
-local UltimaTool = nil
+local Processando = false
+local UltimoObjeto = nil
 
 --==================================================
 -- GUI
@@ -128,28 +130,18 @@ local function FindBaseSpawn()
         end
     end
 
-    local Spawns = {}
-
     for _, Obj in ipairs(workspace:GetDescendants()) do
 
         if Obj:IsA("SpawnLocation") then
-            table.insert(Spawns, Obj)
-        end
-    end
 
-    if #Spawns == 1 then
-        return Spawns[1]
-    end
+            local Nome = string.lower(Obj.Name)
 
-    for _, Spawn in ipairs(Spawns) do
+            if Nome:find("base")
+            or Nome:find("spawn")
+            or Nome:find("home") then
 
-        local Nome = string.lower(Spawn.Name)
-
-        if Nome:find("base")
-        or Nome:find("spawn")
-        or Nome:find("home") then
-
-            return Spawn
+                return Obj
+            end
         end
     end
 
@@ -168,54 +160,49 @@ local function TeleportWithFailure()
         return
     end
 
-    if ProcessandoTool then
+    if Processando then
         return
     end
 
-    ProcessandoTool = true
+    Processando = true
 
     local Point = FindBaseSpawn()
 
     if not Point then
-        ProcessandoTool = false
+        Processando = false
         return
     end
 
     local Character = Player.Character
 
     if not Character then
-        ProcessandoTool = false
+        Processando = false
         return
     end
 
     local Root = Character:FindFirstChild("HumanoidRootPart")
 
     if not Root then
-        ProcessandoTool = false
+        Processando = false
         return
     end
 
-    -- Guarda a posição original
     local PosicaoOriginal = Root.CFrame
 
-    -- Espera 0.30 segundos antes do teleporte
+    -- Espera 8 segundos antes do teleporte
     task.wait(TEMPO_ANTES)
 
     if not Root or not Root.Parent then
-        ProcessandoTool = false
+        Processando = false
         return
     end
 
-    -- Posição da Base
-    local PosicaoBase =
-        Point.CFrame + Vector3.new(0, 4, 0)
+    -- Vai para a Base
+    Root.CFrame = Point.CFrame + Vector3.new(0, 4, 0)
 
-    -- Teleporta para a Base
-    Root.CFrame = PosicaoBase
+    print("aphim-hub: foi para a Base")
 
-    print("aphim-hub: teleporte para Base")
-
-    -- Fica 0.90 segundos na Base
+    -- Permanece 0.90 segundos na Base
     task.wait(TEMPO_NA_BASE)
 
     -- Volta para a posição original
@@ -225,7 +212,138 @@ local function TeleportWithFailure()
 
     print("aphim-hub: voltou para posição original")
 
-    ProcessandoTool = false
+    Processando = false
+end
+
+--==================================================
+-- ENCONTRAR PROXIMITYPROMPT
+--==================================================
+
+local function EncontrarPrompt(Ovo)
+
+    if Ovo:IsA("ProximityPrompt") then
+        return Ovo
+    end
+
+    for _, Objeto in ipairs(Ovo:GetDescendants()) do
+
+        if Objeto:IsA("ProximityPrompt") then
+            return Objeto
+        end
+    end
+
+    return nil
+end
+
+--==================================================
+-- ENCONTRAR PASTA DE OVOS
+--==================================================
+
+local function EncontrarPastaOvos()
+
+    local Eggs = workspace:FindFirstChild("Eggs")
+
+    if Eggs then
+        return Eggs
+    end
+
+    local Spawns = workspace:FindFirstChild("Spawns")
+
+    if Spawns then
+        return Spawns
+    end
+
+    return nil
+end
+
+--==================================================
+-- ANALISAR OVO
+--==================================================
+
+local function AnalisarOvo(Ovo)
+
+    if not Ativado then
+        return
+    end
+
+    if not Ovo or not Ovo.Parent then
+        return
+    end
+
+    local Prompt = EncontrarPrompt(Ovo)
+
+    if not Prompt then
+        return
+    end
+
+    print("--------------------------------")
+    print("aphim-hub: OVO ENCONTRADO")
+    print("Nome:", Ovo.Name)
+    print("Caminho:", Ovo:GetFullName())
+    print("Prompt:", Prompt:GetFullName())
+    print("--------------------------------")
+
+    task.spawn(function()
+
+        -- Espera 8 segundos antes do processo
+        task.wait(TEMPO_ANTES)
+
+        if not Ativado then
+            return
+        end
+
+        if not Ovo or not Ovo.Parent then
+            return
+        end
+
+        print("aphim-hub: ovo pronto")
+
+        -- Espera 0.90 segundos
+        task.wait(TEMPO_NA_BASE)
+
+        TeleportWithFailure()
+
+    end)
+end
+
+--==================================================
+-- MONITORAR OVOS
+--==================================================
+
+local function MonitorarOvos()
+
+    local Pasta = EncontrarPastaOvos()
+
+    if not Pasta then
+
+        warn(
+            "aphim-hub: workspace.Eggs/Spawns não encontrado!"
+        )
+
+        return
+    end
+
+    print(
+        "aphim-hub: pasta de ovos:",
+        Pasta:GetFullName()
+    )
+
+    for _, Ovo in ipairs(Pasta:GetChildren()) do
+        AnalisarOvo(Ovo)
+    end
+
+    Pasta.ChildAdded:Connect(function(Ovo)
+
+        print(
+            "aphim-hub: novo objeto:",
+            Ovo.Name
+        )
+
+        task.wait()
+
+        AnalisarOvo(Ovo)
+
+    end)
 end
 
 --==================================================
@@ -284,12 +402,15 @@ BotButton.MouseButton1Click:Connect(function()
 
         print("aphim-hub: PARA BOTS ATIVADO")
 
+        MonitorarOvos()
+
     else
 
         Status.Text = "STATUS: DESATIVADO"
         Status.TextColor3 = Color3.fromRGB(255, 70, 70)
 
         print("aphim-hub: PARA BOTS DESATIVADO")
+
     end
 end)
 
@@ -307,14 +428,16 @@ local function VerificarTool(Obj)
         return
     end
 
-    -- Evita processar a mesma Tool duas vezes
-    if UltimaTool == Obj and ProcessandoTool then
+    if UltimoObjeto == Obj and Processando then
         return
     end
 
-    UltimaTool = Obj
+    UltimoObjeto = Obj
 
-    print("aphim-hub: objeto detectado:", Obj.Name)
+    print(
+        "aphim-hub: objeto equipado:",
+        Obj.Name
+    )
 
     task.spawn(function()
         TeleportWithFailure()
@@ -332,6 +455,7 @@ local function MonitorarCharacter(Character)
         if Connection then
             Connection:Disconnect()
         end
+
     end
 
     table.clear(Conexoes)
@@ -347,7 +471,6 @@ local function MonitorarCharacter(Character)
         end)
     )
 
-    -- Verifica Tools que já estão equipadas
     for _, Obj in ipairs(Character:GetChildren()) do
 
         if Obj:IsA("Tool") then
@@ -367,10 +490,11 @@ Backpack.ChildAdded:Connect(function(Obj)
         return
     end
 
-    print("aphim-hub: novo item no Backpack:", Obj.Name)
+    print(
+        "aphim-hub: novo item:",
+        Obj.Name
+    )
 
-    -- Espera um pequeno instante para o jogo terminar
-    -- de mover/equipar o item
     task.wait()
 
     if Ativado then
@@ -387,15 +511,15 @@ if Player.Character then
 end
 
 --==================================================
--- QUANDO RENASCER
+-- RENASCIMENTO
 --==================================================
 
 Player.CharacterAdded:Connect(function(Character)
 
     task.wait(0.5)
 
-    UltimaTool = nil
-    ProcessandoTool = false
+    UltimoObjeto = nil
+    Processando = false
 
     MonitorarCharacter(Character)
 
@@ -495,5 +619,5 @@ end)
 --==================================================
 
 print("aphim-hub carregado!")
-print("Tempo antes: 0.30s")
+print("Tempo antes da Base: 8s")
 print("Tempo na Base: 0.90s")
