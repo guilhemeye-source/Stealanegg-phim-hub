@@ -1,24 +1,11 @@
---// aphim-hub | TELEPORTE DIRETO
---// Não precisa equipar nenhum item
---// Clique no botão para executar
---// 0.1s antes do teleporte
---// 0.90s na Base
+--// aphim-hub | PARA BOTS
+--// Clica para Teleportar
+--// 0.1s antes | 0.90s na Base
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
-local Workspace = game:GetService("Workspace")
 
 local Player = Players.LocalPlayer
-
---==================================================
--- CONFIGURAÇÃO
---==================================================
-
-local Ativado = false
-local Processando = false
-
-local TEMPO_ANTES = 0.1
-local TEMPO_NA_BASE = 0.90
 
 --==================================================
 -- GUI
@@ -36,8 +23,8 @@ ScreenGui.Parent = Player:WaitForChild("PlayerGui")
 
 local Main = Instance.new("Frame")
 Main.Name = "Main"
-Main.Size = UDim2.fromOffset(300, 190)
-Main.Position = UDim2.new(0.5, -150, 0.5, -95)
+Main.Size = UDim2.fromOffset(260, 135)
+Main.Position = UDim2.new(0.5, -130, 0.5, -67)
 Main.BackgroundColor3 = Color3.fromRGB(15, 18, 25)
 Main.BorderSizePixel = 0
 Main.Parent = ScreenGui
@@ -48,7 +35,7 @@ Corner.Parent = Main
 
 local Stroke = Instance.new("UIStroke")
 Stroke.Color = Color3.fromRGB(0, 120, 255)
-Stroke.Thickness = 2
+Stroke.Thickness = 1
 Stroke.Parent = Main
 
 --==================================================
@@ -56,7 +43,7 @@ Stroke.Parent = Main
 --==================================================
 
 local Top = Instance.new("Frame")
-Top.Size = UDim2.new(1, 0, 0, 38)
+Top.Size = UDim2.new(1, 0, 0, 34)
 Top.BackgroundColor3 = Color3.fromRGB(10, 13, 20)
 Top.BorderSizePixel = 0
 Top.Parent = Main
@@ -66,12 +53,12 @@ TopCorner.CornerRadius = UDim.new(0, 10)
 TopCorner.Parent = Top
 
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -55, 1, 0)
-Title.Position = UDim2.fromOffset(10, 0)
+Title.Size = UDim2.new(1, -50, 1, 0)
+Title.Position = UDim2.fromOffset(9, 0)
 Title.BackgroundTransparency = 1
 Title.Text = "aphim-hub"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 16
+Title.TextSize = 14
 Title.Font = Enum.Font.GothamBold
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = Top
@@ -81,13 +68,13 @@ Title.Parent = Top
 --==================================================
 
 local CloseButton = Instance.new("TextButton")
-CloseButton.Size = UDim2.fromOffset(28, 28)
-CloseButton.Position = UDim2.new(1, -33, 0, 5)
+CloseButton.Size = UDim2.fromOffset(25, 25)
+CloseButton.Position = UDim2.new(1, -30, 0, 4)
 CloseButton.BackgroundColor3 = Color3.fromRGB(35, 40, 52)
 CloseButton.BorderSizePixel = 0
 CloseButton.Text = "X"
 CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseButton.TextSize = 13
+CloseButton.TextSize = 11
 CloseButton.Font = Enum.Font.GothamBold
 CloseButton.Parent = Top
 
@@ -99,199 +86,203 @@ CloseCorner.Parent = CloseButton
 -- ENCONTRAR BASE
 --==================================================
 
-local function FindBase()
+local function FindBaseSpawn()
 
-    local Base = Workspace:FindFirstChild("Base", true)
+    local Base = workspace:FindFirstChild("Base", true)
 
-    if not Base then
-        warn("aphim-hub: Base não encontrada.")
-        return nil
-    end
+    if Base then
 
-    if Base:IsA("BasePart") then
-        return Base
-    end
-
-    if Base:IsA("Model") then
-
-        if Base.PrimaryPart then
-            return Base.PrimaryPart
+        if Base:IsA("SpawnLocation") then
+            return Base
         end
 
-        return Base:FindFirstChildWhichIsA(
-            "BasePart",
-            true
-        )
+        if Base:IsA("Model") then
+
+            local Spawn =
+                Base:FindFirstChildWhichIsA(
+                    "SpawnLocation",
+                    true
+                )
+
+            if Spawn then
+                return Spawn
+            end
+        end
+
+        if Base:IsA("BasePart") then
+            return Base
+        end
     end
 
-    return Base:FindFirstChildWhichIsA(
-        "BasePart",
-        true
+    local Spawns = {}
+
+    for _, Obj in ipairs(workspace:GetDescendants()) do
+
+        if Obj:IsA("SpawnLocation") then
+            table.insert(Spawns, Obj)
+        end
+
+    end
+
+    if #Spawns == 1 then
+        return Spawns[1]
+    end
+
+    for _, Spawn in ipairs(Spawns) do
+
+        local Nome =
+            string.lower(Spawn.Name)
+
+        if Nome:find("base")
+        or Nome:find("spawn")
+        or Nome:find("home") then
+
+            return Spawn
+
+        end
+    end
+
+    warn(
+        "aphim-hub: Ponto da Base não encontrado!"
     )
+
+    return nil
 end
 
 --==================================================
--- TELEPORTE
+-- TELEPORTAR PARA BASE
 --==================================================
 
-local function IrParaBase()
+local function TeleportToBase()
 
-    if not Ativado then
+    local Point = FindBaseSpawn()
+
+    if not Point then
         return
     end
-
-    if Processando then
-        return
-    end
-
-    Processando = true
 
     local Character = Player.Character
 
     if not Character then
-        Processando = false
         return
     end
 
-    local Root = Character:FindFirstChild(
-        "HumanoidRootPart"
-    )
+    local Root =
+        Character:FindFirstChild(
+            "HumanoidRootPart"
+        )
 
-    if not Root then
-        Processando = false
-        return
-    end
+    local Humanoid =
+        Character:FindFirstChild(
+            "Humanoid"
+        )
 
-    local Base = FindBase()
-
-    if not Base then
-        Processando = false
+    if not Root or not Humanoid then
         return
     end
 
     local PosicaoOriginal = Root.CFrame
 
-    --==================================================
-    -- ESPERA 0.1 SEGUNDO
-    --==================================================
-
-    task.wait(TEMPO_ANTES)
+    -- 0.1 segundo antes
+    task.wait(0.1)
 
     if not Root or not Root.Parent then
-        Processando = false
         return
     end
 
-    --==================================================
-    -- TELEPORTA PARA A BASE
-    --==================================================
+    Humanoid:SetStateEnabled(
+        Enum.HumanoidStateType.Running,
+        false
+    )
 
-    Root.CFrame =
-        Base.CFrame + Vector3.new(0, 4, 0)
+    Humanoid:SetStateEnabled(
+        Enum.HumanoidStateType.FallingDown,
+        false
+    )
 
-    print("aphim-hub: teleportado para a Base")
+    Humanoid.PlatformStand = true
 
-    --==================================================
-    -- FICA 0.90 SEGUNDO NA BASE
-    --==================================================
+    local NovaPosicao =
+        Point.CFrame +
+        Vector3.new(0, 4, 0)
 
-    task.wait(TEMPO_NA_BASE)
+    Root.CFrame = NovaPosicao
 
-    --==================================================
-    -- VOLTA
-    --==================================================
+    task.wait()
+
+    if Root and Root.Parent then
+        Root.CFrame = NovaPosicao
+    end
+
+    print(
+        "aphim-hub: chegou na Base"
+    )
+
+    -- 0.90 segundo na Base
+    task.wait(0.90)
 
     if Root and Root.Parent then
         Root.CFrame = PosicaoOriginal
     end
 
-    print("aphim-hub: voltou para a posição original")
+    if Humanoid and Humanoid.Parent then
 
-    Processando = false
+        Humanoid:SetStateEnabled(
+            Enum.HumanoidStateType.Running,
+            true
+        )
+
+        Humanoid.PlatformStand = false
+
+    end
+
+    print(
+        "aphim-hub: voltou para posição original"
+    )
 end
 
 --==================================================
--- BOTÃO TELEPORTE
+-- BOTÃO PARA BOTS
 --==================================================
 
-local BotButton = Instance.new("TextButton")
+local BostButton = Instance.new("TextButton")
 
-BotButton.Size = UDim2.new(1, -20, 0, 45)
-BotButton.Position = UDim2.fromOffset(10, 55)
+BostButton.Size =
+    UDim2.new(1, -16, 0, 38)
 
-BotButton.BackgroundColor3 =
-    Color3.fromRGB(0, 0, 0)
+BostButton.Position =
+    UDim2.fromOffset(8, 47)
 
-BotButton.BorderSizePixel = 0
+BostButton.BackgroundColor3 =
+    Color3.fromRGB(0, 100, 210)
 
-BotButton.Text = "📶 TELEPORTE BASE"
-BotButton.TextColor3 =
+BostButton.BorderSizePixel = 0
+
+BostButton.Text = "☑️ PARA BOTS"
+
+BostButton.TextColor3 =
     Color3.fromRGB(255, 255, 255)
 
-BotButton.TextSize = 15
-BotButton.Font = Enum.Font.GothamBold
+BostButton.TextSize = 13
+BostButton.Font = Enum.Font.GothamBold
+BostButton.Parent = Main
 
-BotButton.Parent = Main
+local BostCorner = Instance.new("UICorner")
+BostCorner.CornerRadius =
+    UDim.new(0, 8)
 
-local BotCorner = Instance.new("UICorner")
-BotCorner.CornerRadius = UDim.new(0, 8)
-BotCorner.Parent = BotButton
-
---==================================================
--- STATUS
---==================================================
-
-local Status = Instance.new("TextLabel")
-
-Status.Size = UDim2.new(1, -20, 0, 30)
-Status.Position = UDim2.fromOffset(10, 108)
-
-Status.BackgroundTransparency = 1
-
-Status.Text = "STATUS: DESATIVADO"
-Status.TextColor3 =
-    Color3.fromRGB(255, 70, 70)
-
-Status.TextSize = 14
-Status.Font = Enum.Font.GothamBold
-
-Status.Parent = Main
+BostCorner.Parent = BostButton
 
 --==================================================
--- CLIQUE NO TELEPORTE
+-- CLIQUE
 --==================================================
 
-BotButton.MouseButton1Click:Connect(function()
+BostButton.MouseButton1Click:Connect(function()
 
-    Ativado = not Ativado
+    task.spawn(function()
+        TeleportToBase()
+    end)
 
-    if Ativado then
-
-        BotButton.BackgroundColor3 =
-            Color3.fromRGB(0, 70, 140)
-
-        Status.Text = "STATUS: ATIVADO"
-        Status.TextColor3 =
-            Color3.fromRGB(0, 255, 120)
-
-        print("aphim-hub: TELEPORTE ATIVADO")
-
-        -- Não precisa de Tool.
-        -- O clique inicia diretamente.
-        task.spawn(IrParaBase)
-
-    else
-
-        BotButton.BackgroundColor3 =
-            Color3.fromRGB(0, 0, 0)
-
-        Status.Text = "STATUS: DESATIVADO"
-        Status.TextColor3 =
-            Color3.fromRGB(255, 70, 70)
-
-        print("aphim-hub: TELEPORTE DESATIVADO")
-
-    end
 end)
 
 --==================================================
@@ -301,21 +292,13 @@ end)
 local OpenButton = Instance.new("TextButton")
 
 OpenButton.Name = "Reabrir"
+OpenButton.Size = UDim2.fromOffset(52, 52)
+OpenButton.Position = UDim2.fromOffset(15, 180)
+OpenButton.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
 
-OpenButton.Size =
-    UDim2.fromOffset(60, 60)
-
-OpenButton.Position =
-    UDim2.fromOffset(18, 200)
-
-OpenButton.BackgroundColor3 =
-    Color3.fromRGB(10, 10, 18)
-
-OpenButton.Text = "SH"
-OpenButton.TextColor3 =
-    Color3.fromRGB(255, 255, 255)
-
-OpenButton.TextSize = 14
+OpenButton.Text = "AH"
+OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+OpenButton.TextSize = 13
 OpenButton.Font = Enum.Font.GothamBold
 
 OpenButton.Visible = false
@@ -355,7 +338,6 @@ Top.InputBegan:Connect(function(Input)
 
     if Input.UserInputType ==
         Enum.UserInputType.MouseButton1
-
     or Input.UserInputType ==
         Enum.UserInputType.Touch then
 
@@ -373,7 +355,6 @@ Top.InputBegan:Connect(function(Input)
             end
 
         end)
-
     end
 end)
 
@@ -385,7 +366,6 @@ UserInputService.InputChanged:Connect(function(Input)
 
     if Input.UserInputType ==
         Enum.UserInputType.MouseMovement
-
     or Input.UserInputType ==
         Enum.UserInputType.Touch then
 
@@ -407,7 +387,7 @@ end)
 --==================================================
 
 print("aphim-hub carregado!")
-print("Sem Tool necessária.")
+print("☑️ PARA BOTS: pronto")
 print("Tempo antes: 0.1s")
 print("Tempo na Base: 0.90s")
 
