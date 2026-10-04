@@ -1,11 +1,13 @@
 --// aphim-hub | PARA BOTS
---// Qualquer objeto equipado ativa o teleporte
---// Teleporta para a Base e volta de propósito
+--// Detecta Tools novas no Backpack e no Character
+--// 0.30s antes do teleporte
+--// 0.90s permanecendo na Base
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 
 local Player = Players.LocalPlayer
+local Backpack = Player:WaitForChild("Backpack")
 
 --==================================================
 -- CONFIGURAÇÃO
@@ -13,6 +15,12 @@ local Player = Players.LocalPlayer
 
 local Ativado = false
 local Conexoes = {}
+
+local TEMPO_ANTES = 0.30
+local TEMPO_NA_BASE = 0.90
+
+local ProcessandoTool = false
+local UltimaTool = nil
 
 --==================================================
 -- GUI
@@ -151,7 +159,7 @@ local function FindBaseSpawn()
 end
 
 --==================================================
--- TELEPORTE COM FALHA PROPOSITAL
+-- TELEPORTE
 --==================================================
 
 local function TeleportWithFailure()
@@ -160,26 +168,43 @@ local function TeleportWithFailure()
         return
     end
 
+    if ProcessandoTool then
+        return
+    end
+
+    ProcessandoTool = true
+
     local Point = FindBaseSpawn()
 
     if not Point then
+        ProcessandoTool = false
         return
     end
 
     local Character = Player.Character
 
     if not Character then
+        ProcessandoTool = false
         return
     end
 
     local Root = Character:FindFirstChild("HumanoidRootPart")
 
     if not Root then
+        ProcessandoTool = false
         return
     end
 
-    -- Guarda a posição antes do teleporte
+    -- Guarda a posição original
     local PosicaoOriginal = Root.CFrame
+
+    -- Espera 0.30 segundos antes do teleporte
+    task.wait(TEMPO_ANTES)
+
+    if not Root or not Root.Parent then
+        ProcessandoTool = false
+        return
+    end
 
     -- Posição da Base
     local PosicaoBase =
@@ -190,16 +215,17 @@ local function TeleportWithFailure()
 
     print("aphim-hub: teleporte para Base")
 
-    -- Pequena espera
-    task.wait(0.25)
+    -- Fica 0.90 segundos na Base
+    task.wait(TEMPO_NA_BASE)
 
-    -- FALHA PROPOSITAL
-    -- Volta para onde estava
+    -- Volta para a posição original
     if Root and Root.Parent then
         Root.CFrame = PosicaoOriginal
     end
 
-    print("aphim-hub: falha proposital — voltou.")
+    print("aphim-hub: voltou para posição original")
+
+    ProcessandoTool = false
 end
 
 --==================================================
@@ -211,9 +237,7 @@ local BotButton = Instance.new("TextButton")
 BotButton.Size = UDim2.new(1, -20, 0, 45)
 BotButton.Position = UDim2.fromOffset(10, 55)
 
--- PRETO
 BotButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-
 BotButton.BorderSizePixel = 0
 
 BotButton.Text = "📶 PARA BOTS"
@@ -270,12 +294,39 @@ BotButton.MouseButton1Click:Connect(function()
 end)
 
 --==================================================
--- DETECTAR QUALQUER TOOL EQUIPADO
+-- PROCESSAR TOOL
+--==================================================
+
+local function VerificarTool(Obj)
+
+    if not Obj:IsA("Tool") then
+        return
+    end
+
+    if not Ativado then
+        return
+    end
+
+    -- Evita processar a mesma Tool duas vezes
+    if UltimaTool == Obj and ProcessandoTool then
+        return
+    end
+
+    UltimaTool = Obj
+
+    print("aphim-hub: objeto detectado:", Obj.Name)
+
+    task.spawn(function()
+        TeleportWithFailure()
+    end)
+end
+
+--==================================================
+-- MONITORAR CHARACTER
 --==================================================
 
 local function MonitorarCharacter(Character)
 
-    -- Remove conexão anterior
     for _, Connection in ipairs(Conexoes) do
 
         if Connection then
@@ -285,33 +336,47 @@ local function MonitorarCharacter(Character)
 
     table.clear(Conexoes)
 
-    local function VerificarTool(Obj)
-
-        if not Obj:IsA("Tool") then
-            return
-        end
-
-        -- Só funciona quando estiver ativado
-        if not Ativado then
-            return
-        end
-
-        print("aphim-hub: objeto equipado:", Obj.Name)
-
-        TeleportWithFailure()
-    end
-
-    -- Detecta novos objetos entrando no Character
     table.insert(
         Conexoes,
-        Character.ChildAdded:Connect(VerificarTool)
+        Character.ChildAdded:Connect(function(Obj)
+
+            if Obj:IsA("Tool") then
+                VerificarTool(Obj)
+            end
+
+        end)
     )
 
-    -- Verifica caso já exista um Tool
+    -- Verifica Tools que já estão equipadas
     for _, Obj in ipairs(Character:GetChildren()) do
-        VerificarTool(Obj)
+
+        if Obj:IsA("Tool") then
+            VerificarTool(Obj)
+        end
+
     end
 end
+
+--==================================================
+-- MONITORAR BACKPACK
+--==================================================
+
+Backpack.ChildAdded:Connect(function(Obj)
+
+    if not Obj:IsA("Tool") then
+        return
+    end
+
+    print("aphim-hub: novo item no Backpack:", Obj.Name)
+
+    -- Espera um pequeno instante para o jogo terminar
+    -- de mover/equipar o item
+    task.wait()
+
+    if Ativado then
+        VerificarTool(Obj)
+    end
+end)
 
 --==================================================
 -- CHARACTER ATUAL
@@ -328,6 +393,9 @@ end
 Player.CharacterAdded:Connect(function(Character)
 
     task.wait(0.5)
+
+    UltimaTool = nil
+    ProcessandoTool = false
 
     MonitorarCharacter(Character)
 
@@ -427,6 +495,5 @@ end)
 --==================================================
 
 print("aphim-hub carregado!")
-
-
-
+print("Tempo antes: 0.30s")
+print("Tempo na Base: 0.90s")
