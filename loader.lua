@@ -252,24 +252,29 @@ BostButton.MouseButton1Click:Connect(function()
 end)
 
 --==================================================
--- BOTÃO REABRIR
+-- BOTÃO REABRIR COM IMAGEM
 --==================================================
 
-local OpenButton = Instance.new("TextButton")
+local OpenButton = Instance.new("ImageButton")
 OpenButton.Name = "Reabrir"
 OpenButton.Size = UDim2.fromOffset(52, 52)
 OpenButton.Position = UDim2.fromOffset(15, 180)
 OpenButton.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
-OpenButton.Text = "AH"
-OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-OpenButton.TextSize = 13
-OpenButton.Font = Enum.Font.GothamBold
+OpenButton.BorderSizePixel = 0
+
+OpenButton.Image = "https://i.ibb.co/MxrNJQyk/75b4d340-c108-11f1-aed2-815e7ff87a19.png"
+
+OpenButton.ScaleType = Enum.ScaleType.Crop
 OpenButton.Visible = false
 OpenButton.Parent = ScreenGui
 
 local OpenCorner = Instance.new("UICorner")
 OpenCorner.CornerRadius = UDim.new(1, 0)
 OpenCorner.Parent = OpenButton
+
+--==================================================
+-- FECHAR / REABRIR
+--==================================================
 
 CloseButton.MouseButton1Click:Connect(function()
     Main.Visible = false
@@ -336,6 +341,3 @@ print("aphim-hub carregado!")
 print("☑️ PARA BOTS: pronto")
 print("Tempo antes: 0.2s")
 print("Tempo na Base: 0.70s")
-
-
-
