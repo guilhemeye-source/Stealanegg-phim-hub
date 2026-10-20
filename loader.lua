@@ -1,9 +1,9 @@
---// aphim-hub | PARA BOTS
---// Clica para Teleportar
---// 0.2s antes | 0.70s na Base
+--// pyllo hub | ANTI GUARDIAN
+--// Detector de ovo e teleporte para a Base
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 
 local Player = Players.LocalPlayer
 
@@ -12,14 +12,33 @@ local Player = Players.LocalPlayer
 --==================================================
 
 local TEMPO_ANTES = 0.2
-local TEMPO_NA_BASE = 0.70
+local TEMPO_NA_BASE = 0.35
+local ALTURA_BASE = 7
+
+local BotAtivo = false
+local Teleportando = false
+
+local ovoDetectado = nil
+local roubando = false
+
+local IMAGEM_FUNDO = "b5933a40b9ad6f419dc878872fc90e68.jpg"
+
+local ROSA = Color3.fromRGB(255, 70, 170)
+local ROSA_ESCURO = Color3.fromRGB(190, 35, 115)
+local FUNDO = Color3.fromRGB(15, 18, 25)
+local CINZA = Color3.fromRGB(70, 70, 80)
+
+local PALAVRAS_OVO = {
+    "egg",
+    "ovo"
+}
 
 --==================================================
 -- GUI
 --==================================================
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "aphimHub"
+ScreenGui.Name = "pylloHub"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = Player:WaitForChild("PlayerGui")
@@ -28,17 +47,41 @@ local Main = Instance.new("Frame")
 Main.Name = "Main"
 Main.Size = UDim2.fromOffset(260, 135)
 Main.Position = UDim2.new(0.5, -130, 0.5, -67)
-Main.BackgroundColor3 = Color3.fromRGB(15, 18, 25)
+Main.BackgroundColor3 = FUNDO
 Main.BorderSizePixel = 0
+Main.ClipsDescendants = true
 Main.Parent = ScreenGui
 
-local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(0, 10)
-Corner.Parent = Main
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
+
+local BackgroundImage = Instance.new("ImageLabel")
+BackgroundImage.Name = "BackgroundImage"
+BackgroundImage.Size = UDim2.fromScale(1, 1)
+BackgroundImage.Position = UDim2.fromScale(0, 0)
+BackgroundImage.BackgroundTransparency = 1
+BackgroundImage.Image = IMAGEM_FUNDO
+BackgroundImage.ScaleType = Enum.ScaleType.Crop
+BackgroundImage.ImageTransparency = 0.2
+BackgroundImage.ZIndex = 0
+BackgroundImage.Parent = Main
+
+Instance.new("UICorner", BackgroundImage).CornerRadius =
+    UDim.new(0, 10)
+
+local MainOverlay = Instance.new("Frame")
+MainOverlay.Size = UDim2.fromScale(1, 1)
+MainOverlay.BackgroundColor3 = FUNDO
+MainOverlay.BackgroundTransparency = 0.25
+MainOverlay.BorderSizePixel = 0
+MainOverlay.ZIndex = 1
+MainOverlay.Parent = Main
+
+Instance.new("UICorner", MainOverlay).CornerRadius =
+    UDim.new(0, 10)
 
 local Stroke = Instance.new("UIStroke")
-Stroke.Color = Color3.fromRGB(0, 120, 255)
-Stroke.Thickness = 1
+Stroke.Color = ROSA
+Stroke.Thickness = 1.5
 Stroke.Parent = Main
 
 --==================================================
@@ -47,23 +90,24 @@ Stroke.Parent = Main
 
 local Top = Instance.new("Frame")
 Top.Size = UDim2.new(1, 0, 0, 34)
-Top.BackgroundColor3 = Color3.fromRGB(10, 13, 20)
+Top.BackgroundColor3 = Color3.fromRGB(30, 12, 25)
+Top.BackgroundTransparency = 0.1
 Top.BorderSizePixel = 0
+Top.ZIndex = 2
 Top.Parent = Main
 
-local TopCorner = Instance.new("UICorner")
-TopCorner.CornerRadius = UDim.new(0, 10)
-TopCorner.Parent = Top
+Instance.new("UICorner", Top).CornerRadius = UDim.new(0, 10)
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -50, 1, 0)
 Title.Position = UDim2.fromOffset(9, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "aphim-hub"
+Title.Text = "pyllo hub"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 14
 Title.Font = Enum.Font.GothamBold
 Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.ZIndex = 3
 Title.Parent = Top
 
 --==================================================
@@ -73,36 +117,33 @@ Title.Parent = Top
 local CloseButton = Instance.new("TextButton")
 CloseButton.Size = UDim2.fromOffset(25, 25)
 CloseButton.Position = UDim2.new(1, -30, 0, 4)
-CloseButton.BackgroundColor3 = Color3.fromRGB(35, 40, 52)
+CloseButton.BackgroundColor3 = ROSA_ESCURO
 CloseButton.BorderSizePixel = 0
 CloseButton.Text = "X"
 CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 CloseButton.TextSize = 11
 CloseButton.Font = Enum.Font.GothamBold
+CloseButton.ZIndex = 4
 CloseButton.Parent = Top
 
-local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0, 7)
-CloseCorner.Parent = CloseButton
+Instance.new("UICorner", CloseButton).CornerRadius =
+    UDim.new(0, 7)
 
 --==================================================
 -- ENCONTRAR BASE
 --==================================================
 
 local function FindBaseSpawn()
-
     local Base = workspace:FindFirstChild("Base", true)
 
     if Base then
-
         if Base:IsA("SpawnLocation") then
             return Base
         end
 
         if Base:IsA("Model") then
             local Spawn = Base:FindFirstChildWhichIsA(
-                "SpawnLocation",
-                true
+                "SpawnLocation", true
             )
 
             if Spawn then
@@ -128,7 +169,6 @@ local function FindBaseSpawn()
     end
 
     for _, Spawn in ipairs(Spawns) do
-
         local Nome = string.lower(Spawn.Name)
 
         if Nome:find("base")
@@ -138,8 +178,7 @@ local function FindBaseSpawn()
         end
     end
 
-    warn("aphim-hub: Ponto da Base não encontrado!")
-
+    warn("pyllo hub: Ponto da Base não encontrado!")
     return nil
 end
 
@@ -148,129 +187,335 @@ end
 --==================================================
 
 local function TeleportToBase()
+    if not BotAtivo or Teleportando then
+        return
+    end
+
+    Teleportando = true
 
     local Point = FindBaseSpawn()
 
     if not Point then
+        Teleportando = false
         return
     end
 
     local Character = Player.Character
 
     if not Character then
+        Teleportando = false
         return
     end
 
     local Root = Character:FindFirstChild("HumanoidRootPart")
-    local Humanoid = Character:FindFirstChild("Humanoid")
+    local Humanoid = Character:FindFirstChildOfClass("Humanoid")
 
     if not Root or not Humanoid then
+        Teleportando = false
         return
     end
 
     local PosicaoOriginal = Root.CFrame
 
-    -- 0.2 segundo antes do teleporte
     task.wait(TEMPO_ANTES)
 
-    if not Root or not Root.Parent then
+    if not BotAtivo or not Root.Parent then
+        Teleportando = false
         return
     end
 
-    Humanoid:SetStateEnabled(
-        Enum.HumanoidStateType.Running,
-        false
-    )
+    local NovaPosicao = Point.CFrame + Vector3.new(0, ALTURA_BASE, 0)
 
     Humanoid:SetStateEnabled(
-        Enum.HumanoidStateType.FallingDown,
-        false
+        Enum.HumanoidStateType.FallingDown, false
+    )
+    Humanoid:SetStateEnabled(
+        Enum.HumanoidStateType.Freefall, false
+    )
+    Humanoid:SetStateEnabled(
+        Enum.HumanoidStateType.Ragdoll, false
     )
 
     Humanoid.PlatformStand = true
 
-    -- Teleporta para a Base
-    local NovaPosicao =
-        Point.CFrame + Vector3.new(0, 4, 0)
-
     Root.CFrame = NovaPosicao
+    Root.AssemblyLinearVelocity = Vector3.zero
+    Root.AssemblyAngularVelocity = Vector3.zero
 
-    task.wait()
+    print("pyllo hub: chegou na Base")
 
-    if Root and Root.Parent then
+    local TempoInicio = os.clock()
+
+    while os.clock() - TempoInicio < TEMPO_NA_BASE do
+        if not Root.Parent then
+            break
+        end
+
         Root.CFrame = NovaPosicao
+        Root.AssemblyLinearVelocity = Vector3.zero
+        Root.AssemblyAngularVelocity = Vector3.zero
+
+        task.wait()
     end
 
-    print("aphim-hub: chegou na Base")
-
-    -- 0.70 segundo na Base
-    task.wait(TEMPO_NA_BASE)
-
-    -- Volta para a posição original
-    if Root and Root.Parent then
+    if Root.Parent then
         Root.CFrame = PosicaoOriginal
+        Root.AssemblyLinearVelocity = Vector3.zero
+        Root.AssemblyAngularVelocity = Vector3.zero
     end
 
-    if Humanoid and Humanoid.Parent then
-
+    if Humanoid.Parent then
         Humanoid:SetStateEnabled(
-            Enum.HumanoidStateType.Running,
-            true
+            Enum.HumanoidStateType.FallingDown, true
+        )
+        Humanoid:SetStateEnabled(
+            Enum.HumanoidStateType.Freefall, true
+        )
+        Humanoid:SetStateEnabled(
+            Enum.HumanoidStateType.Ragdoll, true
         )
 
         Humanoid.PlatformStand = false
-
     end
 
-    print("aphim-hub: voltou para posição original")
+    Teleportando = false
+
+    print("pyllo hub: voltou para posição original")
 end
 
 --==================================================
--- BOTÃO PARA BOTS
+-- DETECTOR DE OVO
 --==================================================
 
-local BostButton = Instance.new("TextButton")
+local function pareceOvo(obj)
+    if not obj then
+        return false
+    end
 
-BostButton.Size = UDim2.new(1, -16, 0, 38)
-BostButton.Position = UDim2.fromOffset(8, 47)
-BostButton.BackgroundColor3 = Color3.fromRGB(0, 100, 210)
-BostButton.BorderSizePixel = 0
-BostButton.Text = "☑️ PARA BOTS"
-BostButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-BostButton.TextSize = 13
-BostButton.Font = Enum.Font.GothamBold
-BostButton.Parent = Main
+    local nome = string.lower(obj.Name or "")
 
-local BostCorner = Instance.new("UICorner")
-BostCorner.CornerRadius = UDim.new(0, 8)
-BostCorner.Parent = BostButton
+    for _, palavra in ipairs(PALAVRAS_OVO) do
+        if string.find(nome, palavra, 1, true) then
+            return true
+        end
+    end
 
-BostButton.MouseButton1Click:Connect(function()
-    task.spawn(function()
-        TeleportToBase()
-    end)
+    return false
+end
+
+local function detectar(obj, motivo)
+    if not BotAtivo or not obj then
+        return
+    end
+
+    if pareceOvo(obj) and ovoDetectado ~= obj then
+        ovoDetectado = obj
+        roubando = true
+
+        print("OVO DETECTADO!")
+        print("Motivo:", motivo)
+        print("Objeto:", obj:GetFullName())
+
+        task.spawn(TeleportToBase)
+    end
+end
+
+--==================================================
+-- PROXIMITY PROMPT
+--==================================================
+
+ProximityPromptService.PromptTriggered:Connect(function(prompt, player)
+    if player ~= Player or not BotAtivo then
+        return
+    end
+
+    local parent = prompt.Parent
+
+    detectar(prompt, "Prompt")
+    detectar(parent, "Parent do Prompt")
+
+    local atual = parent
+
+    for i = 1, 6 do
+        if not atual then
+            break
+        end
+
+        detectar(atual, "Objeto acima do Prompt")
+        atual = atual.Parent
+    end
+
+    roubando = true
+    print("ROUBO INICIADO!")
 end)
 
 --==================================================
--- BOTÃO REABRIR COM IMAGEM
+-- PROCURAR NO CHARACTER
+--==================================================
+
+local function procurarNoCharacter()
+    if not BotAtivo then
+        return
+    end
+
+    local character = Player.Character
+
+    if not character then
+        return
+    end
+
+    for _, obj in ipairs(character:GetDescendants()) do
+        if pareceOvo(obj) then
+            detectar(obj, "Objeto no Character")
+        end
+
+        if obj:IsA("Tool") and pareceOvo(obj) then
+            detectar(obj, "Tool")
+        end
+
+        if obj:IsA("Weld")
+        or obj:IsA("WeldConstraint")
+        or obj:IsA("Motor6D") then
+            if obj.Part0 then
+                detectar(obj.Part0, "Objeto conectado por Weld")
+            end
+
+            if obj.Part1 then
+                detectar(obj.Part1, "Objeto conectado por Weld")
+            end
+        end
+    end
+end
+
+--==================================================
+-- CHARACTER
+--==================================================
+
+local function conectarCharacter(character)
+    character.DescendantAdded:Connect(function(obj)
+        task.wait()
+
+        if not BotAtivo or not obj:IsDescendantOf(character) then
+            return
+        end
+
+        detectar(obj, "Objeto adicionado ao Character")
+
+        local atual = obj.Parent
+
+        for i = 1, 5 do
+            if not atual then
+                break
+            end
+
+            detectar(atual, "Parent de objeto novo")
+            atual = atual.Parent
+        end
+    end)
+
+    character.DescendantRemoving:Connect(function(obj)
+        if obj == ovoDetectado then
+            print("OVO SAIU DO CHARACTER")
+            ovoDetectado = nil
+            roubando = false
+        end
+    end)
+end
+
+if Player.Character then
+    conectarCharacter(Player.Character)
+end
+
+Player.CharacterAdded:Connect(conectarCharacter)
+
+--==================================================
+-- VERIFICAÇÃO CONTÍNUA
+--==================================================
+
+task.spawn(function()
+    while true do
+        if BotAtivo then
+            procurarNoCharacter()
+
+            local backpack = Player:FindFirstChildOfClass("Backpack")
+
+            if backpack then
+                for _, obj in ipairs(backpack:GetChildren()) do
+                    if obj:IsA("Tool") and pareceOvo(obj) then
+                        detectar(obj, "Tool no Backpack")
+                        print("OVO CHEGOU AO INVENTÁRIO!")
+                    end
+                end
+            end
+        end
+
+        task.wait(0.1)
+    end
+end)
+
+--==================================================
+-- BOTÃO ANTI GUARDIAN
+--==================================================
+
+local BotButton = Instance.new("TextButton")
+BotButton.Size = UDim2.new(1, -16, 0, 38)
+BotButton.Position = UDim2.fromOffset(8, 47)
+BotButton.BackgroundColor3 = CINZA
+BotButton.BorderSizePixel = 0
+BotButton.Text = "ANTI GUARDIAN"
+BotButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+BotButton.TextSize = 13
+BotButton.Font = Enum.Font.GothamBold
+BotButton.ZIndex = 3
+BotButton.Parent = Main
+
+Instance.new("UICorner", BotButton).CornerRadius =
+    UDim.new(0, 8)
+
+local BotButtonStroke = Instance.new("UIStroke")
+BotButtonStroke.Color = ROSA
+BotButtonStroke.Thickness = 1
+BotButtonStroke.Parent = BotButton
+
+BotButton.MouseButton1Click:Connect(function()
+    BotAtivo = not BotAtivo
+
+    if BotAtivo then
+        BotButton.Text = "ANTI GUARDIAN: ON"
+        BotButton.BackgroundColor3 = ROSA
+        print("pyllo hub: ANTI GUARDIAN LIGADO")
+    else
+        BotButton.Text = "ANTI GUARDIAN: OFF"
+        BotButton.BackgroundColor3 = CINZA
+        ovoDetectado = nil
+        roubando = false
+        print("pyllo hub: ANTI GUARDIAN DESLIGADO")
+    end
+end)
+
+--==================================================
+-- BOLINHA DE REABRIR
 --==================================================
 
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Name = "Reabrir"
 OpenButton.Size = UDim2.fromOffset(52, 52)
 OpenButton.Position = UDim2.fromOffset(15, 180)
-OpenButton.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
+OpenButton.BackgroundColor3 = FUNDO
 OpenButton.BorderSizePixel = 0
-
-OpenButton.Image = "https://i.ibb.co/MxrNJQyk/75b4d340-c108-11f1-aed2-815e7ff87a19.png"
-
+OpenButton.Image = IMAGEM_FUNDO
 OpenButton.ScaleType = Enum.ScaleType.Crop
 OpenButton.Visible = false
+OpenButton.ZIndex = 5
 OpenButton.Parent = ScreenGui
 
-local OpenCorner = Instance.new("UICorner")
-OpenCorner.CornerRadius = UDim.new(1, 0)
-OpenCorner.Parent = OpenButton
+Instance.new("UICorner", OpenButton).CornerRadius =
+    UDim.new(1, 0)
+
+local OpenStroke = Instance.new("UIStroke")
+OpenStroke.Color = ROSA
+OpenStroke.Thickness = 2
+OpenStroke.Parent = OpenButton
 
 --==================================================
 -- FECHAR / REABRIR
@@ -295,33 +540,27 @@ local DragStart
 local StartPos
 
 Top.InputBegan:Connect(function(Input)
-
     if Input.UserInputType == Enum.UserInputType.MouseButton1
     or Input.UserInputType == Enum.UserInputType.Touch then
-
         Dragging = true
         DragStart = Input.Position
         StartPos = Main.Position
 
         Input.Changed:Connect(function()
-
             if Input.UserInputState == Enum.UserInputState.End then
                 Dragging = false
             end
-
         end)
     end
 end)
 
 UserInputService.InputChanged:Connect(function(Input)
-
     if not Dragging then
         return
     end
 
     if Input.UserInputType == Enum.UserInputType.MouseMovement
     or Input.UserInputType == Enum.UserInputType.Touch then
-
         local Delta = Input.Position - DragStart
 
         Main.Position = UDim2.new(
@@ -337,7 +576,12 @@ end)
 -- INÍCIO
 --==================================================
 
-print("aphim-hub carregado!")
-print("☑️ PARA BOTS: pronto")
-print("Tempo antes: 0.2s")
-print("Tempo na Base: 0.70s")
+print("pyllo hub carregado!")
+print("Bot começa desligado.")
+print("Clique em ANTI GUARDIAN para ligar.")
+print("Detector de ovo carregado.")
+print("Teleporte: 0.2 segundos antes.")
+print("Tempo na Base: 0.35 segundos.")
+
+
+
